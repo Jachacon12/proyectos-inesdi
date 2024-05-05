@@ -1,0 +1,10 @@
+{
+  "name": "proyectos-inesdi",
+  "version": "1.0.0",
+  "description": "Un grupo de proyectos para el bootcamp inicial",
+  "main": "index.js",
+  "repository": "https://github.com/Jachacon12/proyectos-inesdi.git",
+  "author": "Jachacon12 <jorgech.webdeveloper@gmail.com>",
+  "license": "true",
+  "private": true
+}
