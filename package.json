@@ -11,7 +11,8 @@
     "@commitlint/cli": "^19.3.0",
     "@commitlint/config-conventional": "^19.2.2",
     "cz-conventional-changelog": "^3.3.0",
-    "husky": "^9.0.11"
+    "husky": "^9.0.11",
+    "semantic-release": "^23.0.8"
   },
   "config": {
     "commitizen": {
@@ -19,11 +20,23 @@
     }
   },
   "scripts": {
-    "prepare": "husky install"
+    "prepare": "husky install",
+    "bump-version": "semantic-release"
   },
   "husky": {
     "hooks": {
       "commit-msg": "commitlint -E HUSKY_GIT_PARAMS"
     }
+  },
+  "release": {
+    "branches": [
+      "main"
+    ],
+    "plugins": [
+      "@semantic-release/commit-analyzer",
+      "@semantic-release/release-notes-generator",
+      "@semantic-release/npm",
+      "@semantic-release/github"
+    ]
   }
 }
