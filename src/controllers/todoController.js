@@ -1,97 +1,103 @@
+
 const Todo = require('../models/todo');
 
-// Fetch todos based on optional query parameters
-exports.getTodos = async (req, res) => {
-  const query = req.query || {};
+// Higher-order function for error handling
+const catchErrors = (fn) => {
+  return function (req, res) {
+    return fn(req, res).catch((error) => {
+      if (error.name === 'ValidationError') {
+        res.status(400).send(error);
+      } else {
+        res.status(500).send(error);
+      }
+    });
+  };
+};
 
-  try {
-    const todos = await Todo.find(query); // Uses the constructed query to filter todos
-    res.send(todos);
-  } catch (error) {
-    res.status(500).send(error);
+// Helper function for update and delete operations
+const handleOperation = async (operation, req, res, successMessage) => {
+  if (req.params.id) {
+    // Perform the operation with the provided ID and request body
+    const result = await operation({_id: req.params.id}, req.body);
+    if (!result) {
+      // If the operation didn't return a result, send a 404 error
+      return res.status(404).send("Todo not found.");
+    }
+    // Send the result of the operation
+    res.send(result);
+  } else if (req.query && Object.keys(req.query).length !== 0) {
+    // Perform the operation with the provided query and request body
+    const result = await operation(req.query, req.body);
+    if (result.nModified === 0) {
+      // If the operation didn't modify any documents, send a 404 error
+      return res.status(404).send("No todos matched your query.");
+    }
+    // Send a success message with the number of modified documents
+    res.send(`${successMessage} ${result.nModified} todos successfully.`);
+  } else {
+    // If no ID or query parameters were provided, send a 400 error
+    res.status(400).send("No ID or valid query parameters provided.");
   }
 };
 
-// Handle creating a new todo
-exports.createTodo = async (req, res) => {
-  try {
+// Create a new Todo or multiple Todos based on request body
+exports.createTodo = catchErrors(async (req, res) => {
+  if (Array.isArray(req.body)) {
+    // Bulk create Todos if an array of todos is provided
+    const todos = await Todo.insertMany(req.body);
+    res.status(201).send(todos);
+  } else {
+    // Create a single Todo
+    const newTodo = new Todo(req.body);
+    await newTodo.save();
+    res.status(201).send(newTodo);
+  }
+});
+
+// Get Todos by ID or by query conditions
+exports.getTodos = catchErrors(async (req, res) => {
+  if (req.params.id) {
+    const todo = await Todo.findById(req.params.id);
+    if (!todo) {
+      return res.status(404).send("Todo not found.");
+    }
+    res.send(todo);
+  } else {
+    const todos = await Todo.find(req.query);
+    res.send(todos);
+  }
+});
+
+// Update Todos by ID or by query conditions
+exports.updateTodos = catchErrors((req, res) => {
+  return handleOperation(Todo.updateMany.bind(Todo), req, res, 'Updated');
+});
+
+// Delete Todos by ID or by query conditions
+exports.deleteTodos = catchErrors((req, res) => {
+  return handleOperation(Todo.deleteMany.bind(Todo), req, res, 'Deleted');
+});
+
+// Replace or create a Todo by ID
+exports.replaceOrCreateTodo = catchErrors(async (req, res) => {
+  const { id } = req.params;
+  const data = req.body;
+
+  const todo = await Todo.findById(id);
+  if (todo) {
+    // Update the todo if it exists
+    todo.title = data.title;
+    todo.completed = data.completed !== undefined ? data.completed : todo.completed;
+    await todo.save();
+    res.send(todo);
+  } else {
+    // Create a new todo if it does not exist
     const newTodo = new Todo({
-      title: req.body.title,
-      completed: false,
+      _id: id, // Explicitly set the ID to the one provided
+      title: data.title,
+      completed: data.completed
     });
     await newTodo.save();
     res.status(201).send(newTodo);
-  } catch (error) {
-    res.status(400).send(error);
   }
-};
-
-// Update todos based on ID or a general condition
-exports.updateTodos = async (req, res) => {
-  try {
-    if (req.params.id) {
-      // Update a single todo by ID
-      const updates = req.body;
-      const todo = await Todo.findByIdAndUpdate(req.params.id, updates, {
-        new: true,
-      });
-      if (!todo) {
-        return res.status(404).send('Todo not found.');
-      }
-      res.send(todo);
-    } else if (req.query && Object.keys(req.query).length !== 0) {
-      // Update multiple todos based on query conditions
-      const updates = req.body;
-      const result = await Todo.updateMany(req.query, updates);
-      if (result.nModified === 0) {
-        return res.status(404).send('No todos matched your query.');
-      }
-      res.send(`Updated ${result.nModified} todos successfully.`);
-    } else {
-      res
-        .status(400)
-        .send('No ID or valid query parameters provided for updating.');
-    }
-  } catch (error) {
-    res.status(500).send(error);
-  }
-};
-
-// Handle deleting a todo
-exports.deleteTodo = async (req, res) => {
-  const { id } = req.params;
-  try {
-    const todo = await Todo.findByIdAndDelete(id);
-    if (!todo) {
-      return res.status(404).send();
-    }
-    res.send(todo);
-  } catch (error) {
-    res.status(500).send(error);
-  }
-};
-
-// Handle replacing or creating a todo
-exports.replaceOrCreateTodo = async (req, res) => {
-  const { id } = req.params;
-  const { title, completed } = req.body;
-  try {
-    const todo = await Todo.findById(id);
-    if (todo) {
-      todo.title = title;
-      todo.completed = completed === undefined ? todo.completed : completed;
-      await todo.save();
-      res.send(todo);
-    } else {
-      const newTodo = new Todo({
-        _id: id,
-        title,
-        completed,
-      });
-      await newTodo.save();
-      res.status(201).send(newTodo);
-    }
-  } catch (error) {
-    res.status(400).send(error);
-  }
-};
+});
