@@ -1,5 +1,21 @@
 
 const Todo = require('../models/todo');
+const HTTP_STATUS_CODES = {
+  OK: 200,
+  BAD_REQUEST: 400,
+  NOT_FOUND: 404,
+  INTERNAL_SERVER_ERROR: 500,
+};
+
+const validateRequest = (req) => {
+  if (req.params.id) {
+    return { isValid: true, filter: { _id: req.params.id } };
+  } else if (req.query && Object.keys(req.query).length !== 0) {
+    return { isValid: true, filter: req.query };
+  } else {
+    return { isValid: false, filter: null };
+  }
+};
 
 // Higher-order function for error handling
 function catchErrors(fn) {
@@ -24,29 +40,28 @@ function catchErrors(fn) {
 
 // Helper function for update and delete operations
 const handleOperation = async (operation, req, res, successMessage) => {
-  if (req.params.id) {
-    // Perform the operation with the provided ID and request body
-    const result = await operation({_id: req.params.id}, req.body);
-    if (!result) {
-      // If the operation didn't return a result, send a 404 error
-      return res.status(404).send("Todo not found.");
+  try {
+    const { isValid, filter } = validateRequest(req);
+
+    if (!isValid) {
+      return res.status(HTTP_STATUS_CODES.BAD_REQUEST).json({ message: "No ID or valid query parameters provided." });
     }
-    // Send the result of the operation
-    res.send(result);
-  } else if (req.query && Object.keys(req.query).length !== 0) {
-    // Perform the operation with the provided query and request body
-    const result = await operation(req.query, req.body);
-    if (result.nModified === 0) {
-      // If the operation didn't modify any documents, send a 404 error
-      return res.status(404).send("No todos matched your query.");
+
+    const result = await operation(filter, req.body);
+
+    if (!result || result.nModified === 0) {
+      return res.status(HTTP_STATUS_CODES.NOT_FOUND).json({ message: !result ? "Todo not found." : "No todos matched your query." });
     }
-    // Send a success message with the number of modified documents
-    res.send(`${successMessage} ${result.nModified} todos successfully.`);
-  } else {
-    // If no ID or query parameters were provided, send a 400 error
-    res.status(400).send("No ID or valid query parameters provided.");
+
+    res.status(HTTP_STATUS_CODES.OK).json({
+      message: `${successMessage} ${result.nModified || 1} todo(s) successfully.`,
+      data: result
+    });
+  } catch (error) {
+    res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({ message: "An error occurred while processing your request.", error: error.message });
   }
 };
+
 
 // Create a new Todo or multiple Todos based on request body
 exports.createTodo = catchErrors(async (req, res) => {
