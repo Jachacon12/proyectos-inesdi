@@ -1,8 +1,11 @@
 const Todo = require('../models/todo');
 
-exports.getAllTodos = async (req, res) => {
+// Fetch todos based on optional query parameters
+exports.getTodos = async (req, res) => {
+  const query = req.query || {};
+
   try {
-    const todos = await Todo.find();
+    const todos = await Todo.find(query);  // Uses the constructed query to filter todos
     res.send(todos);
   } catch (error) {
     res.status(500).send(error);
