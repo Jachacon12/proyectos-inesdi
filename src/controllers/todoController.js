@@ -5,7 +5,7 @@ exports.getTodos = async (req, res) => {
   const query = req.query || {};
 
   try {
-    const todos = await Todo.find(query);  // Uses the constructed query to filter todos
+    const todos = await Todo.find(query); // Uses the constructed query to filter todos
     res.send(todos);
   } catch (error) {
     res.status(500).send(error);
@@ -26,18 +26,34 @@ exports.createTodo = async (req, res) => {
   }
 };
 
-// Handle updating a todo
-exports.updateTodo = async (req, res) => {
-  const { id } = req.params;
-  const updates = req.body;
+// Update todos based on ID or a general condition
+exports.updateTodos = async (req, res) => {
   try {
-    const todo = await Todo.findByIdAndUpdate(id, updates, { new: true });
-    if (!todo) {
-      return res.status(404).send();
+    if (req.params.id) {
+      // Update a single todo by ID
+      const updates = req.body;
+      const todo = await Todo.findByIdAndUpdate(req.params.id, updates, {
+        new: true,
+      });
+      if (!todo) {
+        return res.status(404).send('Todo not found.');
+      }
+      res.send(todo);
+    } else if (req.query && Object.keys(req.query).length !== 0) {
+      // Update multiple todos based on query conditions
+      const updates = req.body;
+      const result = await Todo.updateMany(req.query, updates);
+      if (result.nModified === 0) {
+        return res.status(404).send('No todos matched your query.');
+      }
+      res.send(`Updated ${result.nModified} todos successfully.`);
+    } else {
+      res
+        .status(400)
+        .send('No ID or valid query parameters provided for updating.');
     }
-    res.send(todo);
   } catch (error) {
-    res.status(400).send(error);
+    res.status(500).send(error);
   }
 };
 
@@ -70,7 +86,7 @@ exports.replaceOrCreateTodo = async (req, res) => {
       const newTodo = new Todo({
         _id: id,
         title,
-        completed
+        completed,
       });
       await newTodo.save();
       res.status(201).send(newTodo);
