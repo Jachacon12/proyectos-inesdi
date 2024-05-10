@@ -1,4 +1,3 @@
-
 const Todo = require('../models/todo');
 const HTTP_STATUS_CODES = {
   OK: 200,
@@ -7,61 +6,84 @@ const HTTP_STATUS_CODES = {
   INTERNAL_SERVER_ERROR: 500,
 };
 
-const validateRequest = (req) => {
+/**
+ * Validates the incoming request based on the presence of parameters or query.
+ * @param {Object} req - The request object from Express.
+ * @returns {Object} An object indicating if the request is valid and any applicable filter.
+ */
+const validateRequest = req => {
   if (req.params.id) {
     return { isValid: true, filter: { _id: req.params.id } };
   } else if (req.query && Object.keys(req.query).length !== 0) {
     return { isValid: true, filter: req.query };
-  } else {
-    return { isValid: false, filter: null };
   }
+  return { isValid: false, filter: null };
 };
 
-// Higher-order function for error handling
+/**
+ * Error handling middleware that wraps async route handlers and centralizes error handling.
+ * @param {Function} fn - The async function representing the route handler.
+ * @returns {Function} A function that executes the route handler and handles any errors that occur.
+ */
 function catchErrors(fn) {
-  return function(req, res, next) {
-    fn(req, res, next).catch((error) => {
+  return function (req, res, next) {
+    fn(req, res, next).catch(error => {
+      console.error(error); // Log the error for debugging purposes
       if (error.name === 'ValidationError') {
-        // If it's a validation error, send a 400 response with the validation errors
-        res.status(400).json({ error: 'Validation Error', details: error.errors });
+        res
+          .status(HTTP_STATUS_CODES.BAD_REQUEST)
+          .json({ error: 'Validation Error', details: error.errors });
       } else if (error.name === 'CastError') {
-        // If it's a cast error (invalid ObjectId), send a 400 response
-        res.status(400).json({ error: 'Invalid ID' });
+        res.status(HTTP_STATUS_CODES.BAD_REQUEST).json({ error: 'Invalid ID' });
       } else {
-        // For any other type of error, send a 500 response with a generic error message
-        res.status(500).json({ error: 'Server Error' });
-        // Log the error for debugging purposes
-        console.error(error);
+        res
+          .status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR)
+          .json({ error: 'Server Error' });
       }
     });
   };
 }
 
-
-// Helper function for update and delete operations
+/**
+ * Handles common operations like update and delete, and returns the appropriate HTTP response.
+ * @param {Function} operation - Database operation function (update, delete).
+ * @param {Object} req - Request object from Express.
+ * @param {Object} res - Response object from Express.
+ * @param {string} successMessage - Message to send on successful operation.
+ */
 const handleOperation = async (operation, req, res, successMessage) => {
   try {
     const { isValid, filter } = validateRequest(req);
-
     if (!isValid) {
-      return res.status(HTTP_STATUS_CODES.BAD_REQUEST).json({ message: "No ID or valid query parameters provided." });
+      return res
+        .status(HTTP_STATUS_CODES.BAD_REQUEST)
+        .json({ message: 'No ID or valid query parameters provided.' });
     }
 
     const result = await operation(filter, req.body);
-
     if (!result || result.nModified === 0) {
-      return res.status(HTTP_STATUS_CODES.NOT_FOUND).json({ message: !result ? "Todo not found." : "No todos matched your query." });
+      return res.status(HTTP_STATUS_CODES.NOT_FOUND).json({
+        message: !result ? 'Todo not found.' : 'No todos matched your query.',
+      });
     }
 
     res.status(HTTP_STATUS_CODES.OK).json({
-      message: `${successMessage} ${result.nModified || 1} todo(s) successfully.`,
-      data: result
+      message: `${successMessage} ${
+        result.nModified || 1
+      } todo(s) successfully.`,
+      data: result,
     });
   } catch (error) {
-    res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({ message: "An error occurred while processing your request.", error: error.message });
+    res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({
+      message: 'An error occurred while processing your request.',
+      error: error.message,
+    });
   }
 };
 
+// Below are specific functions to create, get, update, delete, and replace Todos, using the middleware and helper functions defined above.
+
+// Each function is wrapped with the `catchErrors` middleware to ensure error handling is consistent and any thrown errors are caught and processed appropriately.
 
 // Create a new Todo or multiple Todos based on request body
 exports.createTodo = catchErrors(async (req, res) => {
@@ -82,7 +104,7 @@ exports.getTodos = catchErrors(async (req, res) => {
   if (req.params.id) {
     const todo = await Todo.findById(req.params.id);
     if (!todo) {
-      return res.status(404).send("Todo not found.");
+      return res.status(404).send('Todo not found.');
     }
     res.send(todo);
   } else {
@@ -110,7 +132,8 @@ exports.replaceOrCreateTodo = catchErrors(async (req, res) => {
   if (todo) {
     // Update the todo if it exists
     todo.title = data.title;
-    todo.completed = data.completed !== undefined ? data.completed : todo.completed;
+    todo.completed =
+      data.completed !== undefined ? data.completed : todo.completed;
     await todo.save();
     res.send(todo);
   } else {
@@ -118,7 +141,7 @@ exports.replaceOrCreateTodo = catchErrors(async (req, res) => {
     const newTodo = new Todo({
       _id: id, // Explicitly set the ID to the one provided
       title: data.title,
-      completed: data.completed
+      completed: data.completed,
     });
     await newTodo.save();
     res.status(201).send(newTodo);
