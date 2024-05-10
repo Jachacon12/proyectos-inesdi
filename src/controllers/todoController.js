@@ -14,7 +14,7 @@ exports.createTodo = async (req, res) => {
   try {
     const newTodo = new Todo({
       title: req.body.title,
-      completed: false
+      completed: false,
     });
     await newTodo.save();
     res.status(201).send(newTodo);
@@ -35,5 +35,19 @@ exports.updateTodo = async (req, res) => {
     res.send(todo);
   } catch (error) {
     res.status(400).send(error);
+  }
+};
+
+// Handle deleting a todo
+exports.deleteTodo = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const todo = await Todo.findByIdAndDelete(id);
+    if (!todo) {
+      return res.status(404).send();
+    }
+    res.send(todo);
+  } catch (error) {
+    res.status(500).send(error);
   }
 };
