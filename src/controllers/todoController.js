@@ -51,3 +51,28 @@ exports.deleteTodo = async (req, res) => {
     res.status(500).send(error);
   }
 };
+
+// Handle replacing or creating a todo
+exports.replaceOrCreateTodo = async (req, res) => {
+  const { id } = req.params;
+  const { title, completed } = req.body;
+  try {
+    const todo = await Todo.findById(id);
+    if (todo) {
+      todo.title = title;
+      todo.completed = completed === undefined ? todo.completed : completed;
+      await todo.save();
+      res.send(todo);
+    } else {
+      const newTodo = new Todo({
+        _id: id,
+        title,
+        completed
+      });
+      await newTodo.save();
+      res.status(201).send(newTodo);
+    }
+  } catch (error) {
+    res.status(400).send(error);
+  }
+};
