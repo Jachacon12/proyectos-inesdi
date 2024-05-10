@@ -2,17 +2,25 @@
 const Todo = require('../models/todo');
 
 // Higher-order function for error handling
-const catchErrors = (fn) => {
-  return function (req, res) {
-    return fn(req, res).catch((error) => {
+function catchErrors(fn) {
+  return function(req, res, next) {
+    fn(req, res, next).catch((error) => {
       if (error.name === 'ValidationError') {
-        res.status(400).send(error);
+        // If it's a validation error, send a 400 response with the validation errors
+        res.status(400).json({ error: 'Validation Error', details: error.errors });
+      } else if (error.name === 'CastError') {
+        // If it's a cast error (invalid ObjectId), send a 400 response
+        res.status(400).json({ error: 'Invalid ID' });
       } else {
-        res.status(500).send(error);
+        // For any other type of error, send a 500 response with a generic error message
+        res.status(500).json({ error: 'Server Error' });
+        // Log the error for debugging purposes
+        console.error(error);
       }
     });
   };
-};
+}
+
 
 // Helper function for update and delete operations
 const handleOperation = async (operation, req, res, successMessage) => {
