@@ -1,8 +1,11 @@
 {
   "name": "proyectos-inesdi",
   "version": "1.0.0",
+  "engines": {
+    "node": "20.12.2"
+  },
   "description": "Un grupo de proyectos para el bootcamp inicial",
-  "main": "index.js",
+  "main": "app.js",
   "repository": "https://github.com/Jachacon12/proyectos-inesdi.git",
   "author": "Jachacon12 <jorgech.webdeveloper@gmail.com>",
   "license": "true",
@@ -21,7 +24,9 @@
   },
   "scripts": {
     "prepare": "husky install",
-    "bump-version": "semantic-release"
+    "bump-version": "semantic-release",
+    "start": "node app.js",
+    "build": "docker-compose up --build"
   },
   "husky": {
     "hooks": {
