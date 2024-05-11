@@ -38,7 +38,7 @@ gh repo clone Jachacon12/proyectos-inesdi
 
 2. **Usar version correcta de Node.js:**
 
-Este paso es para asegurarse que la version de Node es la correcta, basandose en el archivo ​.nvmrc
+Este paso es para asegurarse que la version de Node es la correcta, basandose en el archivo [​.nvmrc](https://github.com/Jachacon12/proyectos-inesdi/blob/933b62bc3817a613829b0ab8fd0efe917051df2c/.nvmrc)
 
 ```bash
 nvm use
@@ -63,7 +63,7 @@ yarn
 Este paso construirá las imágenes y contenedores necesarios.
 Ya que los servicios de MongoDB han sido previamente definidos en el Docker compose, la base de datos comenzará automáticamente con el contenedor.
 
-Un comando ha sido asignado para generar datos mockup (seeder) para que la base de datos no esté vacía.
+Un comando ha sido asignado para generar datos mockup ([seeder](https://github.com/Jachacon12/proyectos-inesdi/blob/d4898a74d1c060d498d2da768e1a2242c825cc51/src/scripts/seedDB.js)) para que la base de datos no esté vacía.
 
 ```bash
 yarn build
@@ -129,7 +129,7 @@ curl "http://localhost:3000/todos?completed=false"
 ```
 
 - Obtener elemento basado en su ID:
-  > **Nota:** el ID debe ser uno válido según la sintaxis previamente definida en el esquema. (ejemplo de ID valido: 663f717de12de232d32614d1)
+  > **Nota:** el ID debe ser uno válido según la sintaxis previamente definida en el [esquema](https://github.com/Jachacon12/proyectos-inesdi/blob/d4898a74d1c060d498d2da768e1a2242c825cc51/src/models/todo.js). (ejemplo de ID valido: 663f717de12de232d32614d1)
 
 ```bash
 curl "http://localhost:3000/todos/myId"
@@ -163,7 +163,7 @@ curl -X DELETE "http://localhost:3000/todos?completed=true"
 ```
 
 - Eliminar elemento basándose en su ID:
-  > **Nota:** el ID debe ser uno válido según la sintaxis previamente definida en el esquema. (ejemplo de ID valido: 663f717de12de232d32614d1)
+  > **Nota:** el ID debe ser uno válido según la sintaxis previamente definida en el [esquema](https://github.com/Jachacon12/proyectos-inesdi/blob/d4898a74d1c060d498d2da768e1a2242c825cc51/src/models/todo.js). (ejemplo de ID valido: 663f717de12de232d32614d1)
 
 ```bash
 curl -X DELETE "http://localhost:3000/todos/myId"
