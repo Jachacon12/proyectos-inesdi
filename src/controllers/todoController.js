@@ -2,7 +2,7 @@ const Todo = require('../models/todo');
 const HTTP_STATUS_CODES = {
   OK: 200,
   BAD_REQUEST: 400,
-  NOT_FOUND: 404,
+  NOT_FOUND: 204,
   INTERNAL_SERVER_ERROR: 500,
 };
 
@@ -51,7 +51,13 @@ function catchErrors(fn) {
  * @param {Object} res - Response object from Express.
  * @param {string} successMessage - Message to send on successful operation.
  */
-const handleOperation = async (operation, req, res, successMessage) => {
+const handleOperation = async (
+  operation,
+  req,
+  res,
+  successMessage,
+  isDeleteOperation = false
+) => {
   try {
     const { isValid, filter } = validateRequest(req);
     if (!isValid) {
@@ -61,16 +67,19 @@ const handleOperation = async (operation, req, res, successMessage) => {
     }
 
     const result = await operation(filter, req.body);
-    if (!result || result.nModified === 0) {
+    let affectedCount = isDeleteOperation
+      ? result.deletedCount
+      : result.nModified;
+
+    // Check if any documents were affected
+    if (!result || affectedCount === 0) {
       return res.status(HTTP_STATUS_CODES.NOT_FOUND).json({
         message: !result ? 'Todo not found.' : 'No todos matched your query.',
       });
     }
 
     res.status(HTTP_STATUS_CODES.OK).json({
-      message: `${successMessage} ${
-        result.nModified || 1
-      } todo(s) successfully.`,
+      message: `${successMessage} ${affectedCount} todo(s) successfully.`,
       data: result,
     });
   } catch (error) {
@@ -120,7 +129,7 @@ exports.updateTodos = catchErrors((req, res) => {
 
 // Delete Todos by ID or by query conditions
 exports.deleteTodos = catchErrors((req, res) => {
-  return handleOperation(Todo.deleteMany.bind(Todo), req, res, 'Deleted');
+  return handleOperation(Todo.deleteMany.bind(Todo), req, res, 'Deleted', true);
 });
 
 // Replace or create a Todo by ID
@@ -135,7 +144,7 @@ exports.replaceOrCreateTodo = catchErrors(async (req, res) => {
     todo.completed =
       data.completed !== undefined ? data.completed : todo.completed;
     await todo.save();
-    res.send(todo);
+    res.status(200).send(todo);
   } else {
     // Create a new todo if it does not exist
     const newTodo = new Todo({
